@@ -1,12 +1,12 @@
 /*
- * enumerate and monitor v4l devices
+ * lsusb
  *
  * Copyright (C) 2009 Kay Sievers <kay.sievers@vrfy.org>
+ * Copyright (C) 2009 Greg Kroah-Hartman <greg@kroah.com>
  *
  * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * modify it under the terms of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  */
 
 #include <stdio.h>
@@ -21,7 +21,6 @@
 #include <poll.h>
 #include <sys/select.h>
 
-#define LIBUDEV_I_KNOW_THE_API_IS_SUBJECT_TO_CHANGE 1
 #include "libudev.h"
 
 int main(int argc, char *argv[])
