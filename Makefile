@@ -35,8 +35,7 @@ uptrans:
 	@(cd po/ && env LG=$(LG) $(MAKE) $@)
 
 clean:
-	rm -f *~ powertop powertop.8.gz po/powertop.pot DEADJOE svn-commit* *.o *.orig 
-	@(cd po/ && $(MAKE) $@)
+	rm -f *~ lsusb *.o
 
 
 dist:
