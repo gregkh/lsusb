@@ -64,43 +64,6 @@ int main(int argc, char *argv[])
 	}
 	udev_enumerate_unref(enumerate);
 
-	/* process events */
-	while (1) {
-		struct pollfd pfd[2];
-		struct udev_device *device;
-
-		pfd[0].fd = udev_monitor_get_fd(monitor);
-		pfd[0].events = POLLIN;
-		pfd[1].fd = STDIN_FILENO;
-		pfd[1].events = POLLIN;
-		if (poll(pfd, 2, -1) < 1)
-			continue;
-
-		if (pfd[0].revents & POLLIN) {
-			const char *cap;
-
-			/* get device from event */
-			device = udev_monitor_receive_device(monitor);
-			if (device == NULL)
-				continue;
-			printf("%s: ", udev_device_get_sysname(device));
-			printf("(%s)\n", udev_device_get_devnode(device));
-			/* filter capture-capable devices */
-			cap = udev_device_get_property_value(device, "ID_V4L_CAPABILITIES");
-			if (cap == NULL || strstr(":capture:", cap) == NULL)
-				continue;
-			/* print device */
-			printf("%s (%s) (%s)\n",
-			       udev_device_get_property_value(device, "ID_V4L_PRODUCT"),
-			       udev_device_get_devnode(device),
-			       udev_device_get_action(device));
-			udev_device_unref(device);
-		}
-
-		/* exit the loop on console input */
-		if (pfd[1].revents & POLLIN)
-			break;
-	}
 	udev_monitor_unref(monitor);
 
 	udev_unref(udev);
