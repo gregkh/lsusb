@@ -21,6 +21,8 @@
 #include <poll.h>
 #include <sys/select.h>
 
+#define LIBUDEV_I_KNOW_THE_API_IS_SUBJECT_TO_CHANGE
+
 #include "libudev.h"
 
 int main(int argc, char *argv[])
@@ -34,11 +36,11 @@ int main(int argc, char *argv[])
 	udev = udev_new();
 
 	/* connect to event source */
-	monitor = udev_monitor_new_from_netlink(udev, "udev");
+//	monitor = udev_monitor_new_from_netlink(udev, "udev");
 	/* install subsytem filter, we will not wake-up for other events */
-	udev_monitor_filter_add_match_subsystem_devtype(monitor, "usb", NULL);
+//	udev_monitor_filter_add_match_subsystem_devtype(monitor, "usb", NULL);
 	/* listen to events, and buffer them */
-	udev_monitor_enable_receiving(monitor);
+//	udev_monitor_enable_receiving(monitor);
 
 	/* prepare a device scan */
 	enumerate = udev_enumerate_new(udev);
@@ -63,7 +65,7 @@ int main(int argc, char *argv[])
 	}
 	udev_enumerate_unref(enumerate);
 
-	udev_monitor_unref(monitor);
+//	udev_monitor_unref(monitor);
 
 	udev_unref(udev);
 	return 0;
