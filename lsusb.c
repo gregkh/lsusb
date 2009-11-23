@@ -25,29 +25,20 @@
 
 #include "libudev.h"
 
-int main(int argc, char *argv[])
+//int main(int argc, char *argv[])
+int main(void)
 {
 	struct udev *udev;
-	struct udev_monitor *monitor;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *list_entry;
 
 	/* libudev context */
 	udev = udev_new();
 
-	/* connect to event source */
-//	monitor = udev_monitor_new_from_netlink(udev, "udev");
-	/* install subsytem filter, we will not wake-up for other events */
-//	udev_monitor_filter_add_match_subsystem_devtype(monitor, "usb", NULL);
-	/* listen to events, and buffer them */
-//	udev_monitor_enable_receiving(monitor);
-
 	/* prepare a device scan */
 	enumerate = udev_enumerate_new(udev);
 	/* filter for video devices */
-	udev_enumerate_add_match_subsystem(enumerate,"usb");
-	/* filter for capture capable devices */
-//	udev_enumerate_add_match_property(enumerate, "ID_V4L_CAPABILITIES", "*:capture:*");
+	udev_enumerate_add_match_subsystem(enumerate, "usb");
 	/* retrieve the list */
 	udev_enumerate_scan_devices(enumerate);
 	/* print devices */
@@ -58,14 +49,28 @@ int main(int argc, char *argv[])
 						      udev_list_entry_get_name(list_entry));
 		if (device == NULL)
 			continue;
-		printf("%s: ", udev_list_entry_get_name(list_entry));
-		printf("(%s)\n",
-		       udev_device_get_devnode(device));
+#if 0
+		printf("%s: \n", udev_list_entry_get_name(list_entry));
+		printf("\tsubsystem: %s\n", udev_device_get_subsystem(device));
+		printf("\tdevtype: %s\n", udev_device_get_devtype(device));
+		printf("\tsyspath: %s\n", udev_device_get_syspath(device));
+		printf("\tsysname: %s\n", udev_device_get_sysname(device));
+		printf("\tsysnum: %s\n", udev_device_get_sysnum(device));
+		printf("\tdevpath: %s\n", udev_device_get_devpath(device));
+		printf("\tdevnode: %s\n", udev_device_get_devnode(device));
+		printf("\tdriver: %s\n", udev_device_get_driver(device));
+#endif
+		if (strcmp("usb_device", udev_device_get_devtype(device)) == 0) {
+			printf("Bus %s Device %s: ID %s:%s\n",
+				udev_device_get_sysattr_value(device, "busnum"),
+				udev_device_get_sysattr_value(device, "devnum"),
+				udev_device_get_sysattr_value(device, "idVendor"),
+				udev_device_get_sysattr_value(device, "idProduct"));
+		}
+
 		udev_device_unref(device);
 	}
 	udev_enumerate_unref(enumerate);
-
-//	udev_monitor_unref(monitor);
 
 	udev_unref(udev);
 	return 0;
