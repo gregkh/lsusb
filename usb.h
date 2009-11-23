@@ -20,6 +20,15 @@ struct usb_interface {
 	char *driver;
 };
 
+struct usb_endpoint {
+	const char *bEndpointAddress;
+	const char *bInterval;
+	const char *bLength;
+	const char *bmAttributes;
+	const char *direction;
+	const char *type;
+	const char *wMaxPacketSize;
+};
 
 struct usb_device {
 	struct list_head list;			/* connect devices independant of the bus */
@@ -30,31 +39,31 @@ struct usb_device {
 	unsigned int parent_portnum;
 	unsigned int portnum;
 
-	unsigned int bMaxPacketSize0;
-	char bMaxPower[64];
-	unsigned int bNumConfigurations;
-	unsigned int bNumInterfaces;
-	unsigned int bmAttributes;
 	unsigned int configuration;
 	const char *idProduct;
 	const char *idVendor;
 	const char *busnum;
 	const char *devnum;
-	unsigned int maxchild;
+	const char *maxchild;
+	const char *quirks;
+	const char *speed;
+	const char *version;
 
 	const char *bConfigurationValue;
 	const char *bDeviceClass;
 	const char *bDeviceProtocol;
 	const char *bDeviceSubClass;
+	const char *bNumConfigurations;
+	const char *bNumInterfaces;
+	const char *bmAttributes;
+	const char *bMaxPacketSize0;
+	const char *bMaxPower;
 	const char *manufacturer;
 	const char *bcdDevice;
 	const char *product;
 	const char *serial;
 
-	char version[64];
-	char speed[4 + 1];      /* '1.5','12','480' + '\n' */
-
 	char *name;
-	char *driver;
+	char *driver;			/* always "usb" but hey, it's nice to be complete */
 };
 

@@ -51,6 +51,16 @@ static void free_usb_device(struct usb_device *usb_device)
 	free((void *)usb_device->bDeviceClass);
 	free((void *)usb_device->bDeviceProtocol);
 	free((void *)usb_device->bDeviceSubClass);
+	free((void *)usb_device->bNumConfigurations);
+	free((void *)usb_device->bNumInterfaces);
+	free((void *)usb_device->bmAttributes);
+	free((void *)usb_device->bMaxPacketSize0);
+	free((void *)usb_device->bMaxPower);
+	free((void *)usb_device->maxchild);
+	free((void *)usb_device->quirks);
+	free((void *)usb_device->speed);
+	free((void *)usb_device->version);
+	free((void *)usb_device->driver);
 	free(usb_device);
 }
 
@@ -70,13 +80,14 @@ int main(void)
 	struct udev *udev;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *list_entry;
+	const char *temp;
 
 	/* libudev context */
 	udev = udev_new();
 
 	/* prepare a device scan */
 	enumerate = udev_enumerate_new(udev);
-	/* filter for video devices */
+	/* filter for usb devices */
 	udev_enumerate_add_match_subsystem(enumerate, "usb");
 	/* retrieve the list */
 	udev_enumerate_scan_devices(enumerate);
@@ -116,13 +127,19 @@ int main(void)
 			usb_device->bDeviceClass	= get_dev_string(device, "bDeviceClass");
 			usb_device->bDeviceProtocol	= get_dev_string(device, "bDeviceProtocol");
 			usb_device->bDeviceSubClass	= get_dev_string(device, "bDeviceSubClass");
+			usb_device->bNumConfigurations	= get_dev_string(device, "bNumConfigurations");
+			usb_device->bNumInterfaces	= get_dev_string(device, "bNumInterfaces");
+ 			usb_device->bmAttributes	= get_dev_string(device, "bmAttributes");
+			usb_device->bMaxPacketSize0	= get_dev_string(device, "bMaxPacketSize0");
+			usb_device->bMaxPower		= get_dev_string(device, "bMaxPower");
+ 			usb_device->maxchild		= get_dev_string(device, "maxchild");
+ 			usb_device->quirks		= get_dev_string(device, "quirks");
+ 			usb_device->speed		= get_dev_string(device, "speed");
+ 			usb_device->version		= get_dev_string(device, "version");
+			temp = udev_device_get_driver(device);
+			if (temp)
+				usb_device->driver = strdup(temp);
 
-//			printf("Bus %s Device %s: ID %s:%s %s\n",
-//				udev_device_get_sysattr_value(device, "busnum"),
-//				udev_device_get_sysattr_value(device, "devnum"),
-//				udev_device_get_sysattr_value(device, "idVendor"),
-//				udev_device_get_sysattr_value(device, "idProduct"),
-//				udev_device_get_sysattr_value(device, "manufacturer"));
 			printf("Bus %03ld Device %03ld: ID %s:%s %s\n",
 				strtol(usb_device->busnum, NULL, 10),
 				strtol(usb_device->devnum, NULL, 10),
