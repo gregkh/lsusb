@@ -26,15 +26,25 @@
 #include <libudev.h>
 #include "usb.h"
 
+static void *robust_malloc(size_t size)
+{
+	void *data;
+
+	data = malloc(size);
+	if (data == NULL)
+		exit(1);
+	memset(data, 0, size);
+	return data;
+}
+
 static struct usb_device *new_usb_device(void)
 {
-	struct usb_device *usb_device;
+	return robust_malloc(sizeof(struct usb_device));
+}
 
-	usb_device = malloc(sizeof(*usb_device));
-	if (usb_device == NULL)
-		exit(1);
-	memset(usb_device, 0, sizeof(*usb_device));
-	return usb_device;
+static struct usb_interface *new_usb_interface(void)
+{
+	return robust_malloc(sizeof(struct usb_interface));
 }
 
 static void free_usb_device(struct usb_device *usb_device)
@@ -64,6 +74,18 @@ static void free_usb_device(struct usb_device *usb_device)
 	free(usb_device);
 }
 
+static void free_usb_interface(struct usb_interface *usb_intf)
+{
+	free((void *)usb_intf->driver);
+	free((void *)usb_intf->bAlternateSetting);
+	free((void *)usb_intf->bInterfaceClass);
+	free((void *)usb_intf->bInterfaceNumber);
+	free((void *)usb_intf->bInterfaceProtocol);
+	free((void *)usb_intf->bInterfaceSubClass);
+	free((void *)usb_intf->bNumEndpoints);
+	free(usb_intf);
+}
+
 static const char *get_dev_string(struct udev_device *device, const char *name)
 {
 	const char *value;
@@ -74,13 +96,76 @@ static const char *get_dev_string(struct udev_device *device, const char *name)
 	return NULL;
 }
 
+static void create_usb_device(struct udev_device *device)
+{
+	struct usb_device *usb_device;
+	const char *temp;
+
+	usb_device = new_usb_device();
+	usb_device->bcdDevice	= get_dev_string(device, "bcdDevice");
+	usb_device->product	= get_dev_string(device, "product");
+	usb_device->serial	= get_dev_string(device, "serial");
+	usb_device->manufacturer= get_dev_string(device, "manufacturer");
+	usb_device->idProduct	= get_dev_string(device, "idProduct");
+	usb_device->idVendor	= get_dev_string(device, "idVendor");
+	usb_device->busnum	= get_dev_string(device, "busnum");
+	usb_device->devnum	= get_dev_string(device, "devnum");
+	usb_device->bConfigurationValue	= get_dev_string(device, "bConfigurationValue");
+	usb_device->bDeviceClass	= get_dev_string(device, "bDeviceClass");
+	usb_device->bDeviceProtocol	= get_dev_string(device, "bDeviceProtocol");
+	usb_device->bDeviceSubClass	= get_dev_string(device, "bDeviceSubClass");
+	usb_device->bNumConfigurations	= get_dev_string(device, "bNumConfigurations");
+	usb_device->bNumInterfaces	= get_dev_string(device, "bNumInterfaces");
+	usb_device->bmAttributes	= get_dev_string(device, "bmAttributes");
+	usb_device->bMaxPacketSize0	= get_dev_string(device, "bMaxPacketSize0");
+	usb_device->bMaxPower		= get_dev_string(device, "bMaxPower");
+	usb_device->maxchild		= get_dev_string(device, "maxchild");
+	usb_device->quirks		= get_dev_string(device, "quirks");
+	usb_device->speed		= get_dev_string(device, "speed");
+	usb_device->version		= get_dev_string(device, "version");
+	temp = udev_device_get_driver(device);
+	if (temp)
+		usb_device->driver = strdup(temp);
+
+	printf("Bus %03ld Device %03ld: ID %s:%s %s\n",
+		strtol(usb_device->busnum, NULL, 10),
+		strtol(usb_device->devnum, NULL, 10),
+		usb_device->idVendor,
+		usb_device->idProduct,
+		usb_device->manufacturer);
+	free_usb_device(usb_device);
+}
+
+static void create_usb_interface(struct udev_device *device)
+{
+	struct usb_interface *usb_intf;
+	const char *temp;
+
+	usb_intf = new_usb_interface();
+
+	usb_intf->bAlternateSetting	= get_dev_string(device, "bAlternateSetting");
+	usb_intf->bInterfaceClass	= get_dev_string(device, "bInterfaceClass");
+	usb_intf->bInterfaceNumber	= get_dev_string(device, "bInterfaceNumber");
+	usb_intf->bInterfaceProtocol	= get_dev_string(device, "bInterfaceProtocol");
+	usb_intf->bInterfaceSubClass	= get_dev_string(device, "bInterfaceSubClass");
+	usb_intf->bNumEndpoints		= get_dev_string(device, "bNumEndpoints");
+
+	temp = udev_device_get_driver(device);
+	if (temp)
+		usb_intf->driver = strdup(temp);
+
+	printf("\tIntf %s (%s)\n",
+		usb_intf->bInterfaceNumber,
+		usb_intf->driver);
+	free_usb_interface(usb_intf);
+}
+
 //int main(int argc, char *argv[])
 int main(void)
 {
 	struct udev *udev;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *list_entry;
-	const char *temp;
 
 	/* libudev context */
 	udev = udev_new();
@@ -111,43 +196,11 @@ int main(void)
 		printf("\tdriver: %s\n", udev_device_get_driver(device));
 #endif
 
-		if (strcmp("usb_device", udev_device_get_devtype(device)) == 0) {
-			struct usb_device *usb_device;
+		if (strcmp("usb_device", udev_device_get_devtype(device)) == 0)
+			create_usb_device(device);
 
-			usb_device = new_usb_device();
-			usb_device->bcdDevice	= get_dev_string(device, "bcdDevice");
-			usb_device->product	= get_dev_string(device, "product");
-			usb_device->serial	= get_dev_string(device, "serial");
-			usb_device->manufacturer= get_dev_string(device, "manufacturer");
-			usb_device->idProduct	= get_dev_string(device, "idProduct");
-			usb_device->idVendor	= get_dev_string(device, "idVendor");
-			usb_device->busnum	= get_dev_string(device, "busnum");
-			usb_device->devnum	= get_dev_string(device, "devnum");
-			usb_device->bConfigurationValue	= get_dev_string(device, "bConfigurationValue");
-			usb_device->bDeviceClass	= get_dev_string(device, "bDeviceClass");
-			usb_device->bDeviceProtocol	= get_dev_string(device, "bDeviceProtocol");
-			usb_device->bDeviceSubClass	= get_dev_string(device, "bDeviceSubClass");
-			usb_device->bNumConfigurations	= get_dev_string(device, "bNumConfigurations");
-			usb_device->bNumInterfaces	= get_dev_string(device, "bNumInterfaces");
- 			usb_device->bmAttributes	= get_dev_string(device, "bmAttributes");
-			usb_device->bMaxPacketSize0	= get_dev_string(device, "bMaxPacketSize0");
-			usb_device->bMaxPower		= get_dev_string(device, "bMaxPower");
- 			usb_device->maxchild		= get_dev_string(device, "maxchild");
- 			usb_device->quirks		= get_dev_string(device, "quirks");
- 			usb_device->speed		= get_dev_string(device, "speed");
- 			usb_device->version		= get_dev_string(device, "version");
-			temp = udev_device_get_driver(device);
-			if (temp)
-				usb_device->driver = strdup(temp);
-
-			printf("Bus %03ld Device %03ld: ID %s:%s %s\n",
-				strtol(usb_device->busnum, NULL, 10),
-				strtol(usb_device->devnum, NULL, 10),
-				usb_device->idVendor,
-				usb_device->idProduct,
-				usb_device->manufacturer);
-			free_usb_device(usb_device);
-		}
+		if (strcmp("usb_interface", udev_device_get_devtype(device)) == 0)
+			create_usb_interface(device);
 
 		udev_device_unref(device);
 	}

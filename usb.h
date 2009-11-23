@@ -9,12 +9,12 @@ struct usb_interface {
 	unsigned int configuration;
 	unsigned int ifnum;
 
-	unsigned int bAlternateSetting;
-	unsigned int bInterfaceClass;
-	unsigned int bInterfaceNumber;
-	unsigned int bInterfaceProtocol;
-	unsigned int bInterfaceSubClass;
-	unsigned int bNumEndpoints;
+	const char *bAlternateSetting;
+	const char *bInterfaceClass;
+	const char *bInterfaceNumber;
+	const char *bInterfaceProtocol;
+	const char *bInterfaceSubClass;
+	const char *bNumEndpoints;
 
 	char *name;
 	char *driver;
