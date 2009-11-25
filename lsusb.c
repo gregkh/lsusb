@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -21,11 +22,15 @@
 #include <poll.h>
 #include <limits.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 
 #define LIBUDEV_I_KNOW_THE_API_IS_SUBJECT_TO_CHANGE
 
 #include <libudev.h>
+#include "list.h"
 #include "usb.h"
+
+static LIST_HEAD(usb_devices);
 
 static void *robust_malloc(size_t size)
 {
@@ -73,6 +78,17 @@ static void free_usb_device(struct usb_device *usb_device)
 	free((void *)usb_device->version);
 	free((void *)usb_device->driver);
 	free(usb_device);
+}
+
+static void free_usb_devices(void)
+{
+	struct usb_device *usb_device;
+	struct usb_device *temp;
+
+	list_for_each_entry_safe(usb_device, temp, &usb_devices, list) {
+		list_del(&usb_device->list);
+		free_usb_device(usb_device);
+	}
 }
 
 static void free_usb_interface(struct usb_interface *usb_intf)
@@ -128,13 +144,28 @@ static void create_usb_device(struct udev_device *device)
 	if (temp)
 		usb_device->driver = strdup(temp);
 
-	printf("Bus %03ld Device %03ld: ID %s:%s %s\n",
-		strtol(usb_device->busnum, NULL, 10),
-		strtol(usb_device->devnum, NULL, 10),
-		usb_device->idVendor,
-		usb_device->idProduct,
-		usb_device->manufacturer);
-	free_usb_device(usb_device);
+//	printf("Bus %03ld Device %03ld: ID %s:%s %s\n",
+//		strtol(usb_device->busnum, NULL, 10),
+//		strtol(usb_device->devnum, NULL, 10),
+//		usb_device->idVendor,
+//		usb_device->idProduct,
+//		usb_device->manufacturer);
+	list_add_tail(&usb_device->list, &usb_devices);
+//	free_usb_device(usb_device);
+}
+
+static void print_usb_devices(void)
+{
+	struct usb_device *usb_device;
+
+	list_for_each_entry(usb_device, &usb_devices, list) {
+		printf("Bus %03ld Device %03ld: ID %s:%s %s\n",
+			strtol(usb_device->busnum, NULL, 10),
+			strtol(usb_device->devnum, NULL, 10),
+			usb_device->idVendor,
+			usb_device->idProduct,
+			usb_device->manufacturer);
+	}
 }
 
 static void create_usb_interface(struct udev_device *device)
@@ -354,5 +385,7 @@ int main(void)
 	udev_enumerate_unref(enumerate);
 
 	udev_unref(udev);
+	print_usb_devices();
+	free_usb_devices();
 	return 0;
 }
