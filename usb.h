@@ -1,4 +1,4 @@
-#include "list.h"
+#include "short_types.h"
 
 struct usb_device;
 
@@ -21,14 +21,14 @@ struct usb_interface {
 };
 
 struct usb_config {
-	unsigned char bLength;
-	unsigned char bDescriptorType;
-	unsigned short wTotalLength;
-	unsigned char bNumInterfaces;
-	unsigned char bConfigurationValue;
-	unsigned char iConfiguration;
-	unsigned char bmAttributes;
-	unsigned char bMaxPower;
+	u8 bLength;
+	u8 bDescriptorType;
+	u16 wTotalLength;
+	u8 bNumInterfaces;
+	u8 bConfigurationValue;
+	u8 iConfiguration;
+	u8 bmAttributes;
+	u8 bMaxPower;
 };
 
 struct usb_endpoint {
