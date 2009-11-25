@@ -19,6 +19,7 @@
 #include <syslog.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <limits.h>
 #include <sys/select.h>
 
 #define LIBUDEV_I_KNOW_THE_API_IS_SUBJECT_TO_CHANGE
@@ -160,6 +161,149 @@ static void create_usb_interface(struct udev_device *device)
 	free_usb_interface(usb_intf);
 }
 
+#if 0
+static void parse_device_descriptor(const unsigned char *descriptor)
+{
+	/*
+	 * Nothing here we really care about, it's all in the sysfs files we
+	 * read from the libudev attributes
+	 */
+}
+#endif
+
+static void parse_config_descriptor(const unsigned char *descriptor)
+{
+	struct usb_config config;
+
+	config.bLength			= descriptor[0];
+	config.bDescriptorType		= descriptor[1];
+	config.wTotalLength		= (descriptor[3] << 8) | descriptor[2];
+	config.bNumInterfaces		= descriptor[4];
+	config.bConfigurationValue	= descriptor[5];
+	config.iConfiguration		= descriptor[6];
+	config.bmAttributes		= descriptor[7];
+	config.bMaxPower		= descriptor[8];
+
+	printf("Config descriptor\n");
+	printf("\tbLength\t\t\t%d\n", config.bLength);
+	printf("\tbDescriptorType\t\t%d\n", config.bDescriptorType);
+	printf("\twTotalLength\t\t%d\n", config.wTotalLength);
+	printf("\tbNumInterfaces\t\t%d\n", config.bNumInterfaces);
+	printf("\tbConfigurationValue\t%d\n", config.bConfigurationValue);
+	printf("\tiConfiguration\t\t%d\n", config.iConfiguration);
+	printf("\tbmAttributes\t\t0x%02x\n", config.bmAttributes);
+	printf("\tbMaxPower\t\t%d\n", config.bMaxPower);
+}
+
+static void parse_interface_descriptor(const unsigned char *descriptor)
+{
+	unsigned char bLength			= descriptor[0];
+	unsigned char bDescriptorType		= descriptor[1];
+	unsigned char bInterfaceNumber		= descriptor[2];
+	unsigned char bAlternateSetting		= descriptor[3];
+	unsigned char bNumEndpoints		= descriptor[4];
+	unsigned char bInterfaceClass		= descriptor[5];
+	unsigned char bInterfaceSubClass	= descriptor[6];
+	unsigned char bInterfaceProtocol	= descriptor[7];
+	unsigned char iInterface		= descriptor[8];
+
+	printf("Interface descriptor\n");
+	printf("\tbLength\t\t\t%d\n", bLength);
+	printf("\tbDescriptorType\t\t%d\n", bDescriptorType);
+	printf("\tbInterfaceNumber\t%d\n", bInterfaceNumber);
+	printf("\tbAlternateSetting\t%d\n", bAlternateSetting);
+	printf("\tbNumEndpoints\t\t%d\n", bNumEndpoints);
+	printf("\tbInterfaceClass\t\t%d\n", bInterfaceClass);
+	printf("\tbInterfaceSubClass\t%d\n", bInterfaceSubClass);
+	printf("\tbInterfaceProtocol\t%d\n", bInterfaceProtocol);
+	printf("\tiInterface\t\t%d\n", iInterface);
+
+}
+
+static void parse_endpoint_descriptor(const unsigned char *descriptor)
+{
+	unsigned char bLength			= descriptor[0];
+	unsigned char bDescriptorType		= descriptor[1];
+	unsigned char bEndpointAddress		= descriptor[2];
+	unsigned char bmAttributes		= descriptor[3];
+	unsigned short wMaxPacketSize		= (descriptor[5] << 8) | descriptor[4];
+	unsigned char bInterval			= descriptor[6];
+
+	printf("Endpoint descriptor\n");
+	printf("\tbLength\t\t\t%d\n", bLength);
+	printf("\tbDescriptorType\t\t%d\n", bDescriptorType);
+	printf("\tbEndpointAddress\t%0x\n", bEndpointAddress);
+	printf("\tbmAtributes\t\t%0x\n", bmAttributes);
+	printf("\twMaxPacketSize\t\t%d\n", wMaxPacketSize);
+	printf("\tbInterval\t\t%d\n", bInterval);
+}
+
+static void read_raw_usb_descriptor(const char *filename)
+{
+	int file;
+	unsigned char *data;
+	unsigned char size;
+	ssize_t read_retval;
+
+	file = open(filename, O_RDONLY);
+	if (file == -1)
+		exit(1);
+	while (1) {
+		read_retval = read(file, &size, 1);
+		if (read_retval != 1)
+			break;
+		data = malloc(size);
+		data[0] = size;
+		read_retval = read(file, &data[1], size-1);
+		switch (data[1]) {
+		case 0x01:
+			/* device descriptor */
+//			parse_device_descriptor(data);
+			break;
+		case 0x02:
+			/* config descriptor */
+			parse_config_descriptor(data);
+			break;
+		case 0x03:
+			/* string descriptor */
+//			parse_string_descriptor(data);
+			break;
+		case 0x04:
+			/* interface descriptor */
+			parse_interface_descriptor(data);
+			break;
+		case 0x05:
+			/* endpoint descriptor */
+			parse_endpoint_descriptor(data);
+			break;
+		case 0x06:
+			/* device qualifier */
+			break;
+		case 0x07:
+			/* other speed config */
+			break;
+		case 0x08:
+			/* interface power */
+			break;
+		default:
+			break;
+		}
+		free(data);
+	}
+	close(file);
+}
+
+static void create_usb_root_device(struct udev_device *device)
+{
+	char file[PATH_MAX];
+
+	create_usb_device(device);
+	sprintf(file, "%s/descriptors", udev_device_get_syspath(device));
+	printf("%s\n", file);
+	read_raw_usb_descriptor(file);
+	printf("\tsyspath: %s\n", udev_device_get_syspath(device));
+}
+
 //int main(int argc, char *argv[])
 int main(void)
 {
@@ -184,23 +328,26 @@ int main(void)
 						      udev_list_entry_get_name(list_entry));
 		if (device == NULL)
 			continue;
+		if (strcmp("usb_device", udev_device_get_devtype(device)) == 0)
+//		if (strstr(udev_device_get_sysname(device), "usb") != NULL)
+			create_usb_root_device(device);
 #if 0
-		printf("%s: \n", udev_list_entry_get_name(list_entry));
-		printf("\tsubsystem: %s\n", udev_device_get_subsystem(device));
+		printf("%s: ", udev_list_entry_get_name(list_entry));
 		printf("\tdevtype: %s\n", udev_device_get_devtype(device));
+		printf("\tsubsystem: %s\n", udev_device_get_subsystem(device));
 		printf("\tsyspath: %s\n", udev_device_get_syspath(device));
-		printf("\tsysname: %s\n", udev_device_get_sysname(device));
 		printf("\tsysnum: %s\n", udev_device_get_sysnum(device));
+		printf("\tsysname: %s\n", udev_device_get_sysname(device));
 		printf("\tdevpath: %s\n", udev_device_get_devpath(device));
 		printf("\tdevnode: %s\n", udev_device_get_devnode(device));
 		printf("\tdriver: %s\n", udev_device_get_driver(device));
-#endif
 
 		if (strcmp("usb_device", udev_device_get_devtype(device)) == 0)
 			create_usb_device(device);
 
 		if (strcmp("usb_interface", udev_device_get_devtype(device)) == 0)
 			create_usb_interface(device);
+#endif
 
 		udev_device_unref(device);
 	}

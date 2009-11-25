@@ -20,6 +20,17 @@ struct usb_interface {
 	char *driver;
 };
 
+struct usb_config {
+	unsigned char bLength;
+	unsigned char bDescriptorType;
+	unsigned short wTotalLength;
+	unsigned char bNumInterfaces;
+	unsigned char bConfigurationValue;
+	unsigned char iConfiguration;
+	unsigned char bmAttributes;
+	unsigned char bMaxPower;
+};
+
 struct usb_endpoint {
 	const char *bEndpointAddress;
 	const char *bInterval;
