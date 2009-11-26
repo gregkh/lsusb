@@ -196,6 +196,9 @@ static void sort_usb_devices(void)
 						usb_device->devnum,
 						sorted_usb_device->busnum,
 						sorted_usb_device->devnum);
+					// This is wrong, needs to be inserted after sorted_usb_device
+					// not at the end of the list as it currently is
+					// FIXME
 					list_move_tail(&usb_device->list, &sorted_devices);
 					moved = 1;
 					break;
