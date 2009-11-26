@@ -154,6 +154,68 @@ static void create_usb_device(struct udev_device *device)
 //	free_usb_device(usb_device);
 }
 
+static int compare_usb_devices(struct usb_device *a, struct usb_device *b)
+{
+	long busnum_a = strtol(a->busnum, NULL, 10);
+	long busnum_b = strtol(b->busnum, NULL, 10);
+	long devnum_a;
+	long devnum_b;
+
+	printf(" %s,%s vs %s,%s\n", a->busnum, a->devnum, b->busnum, b->devnum);
+	if (busnum_a < busnum_b)
+		return -1;
+	if (busnum_a > busnum_b)
+		return 1;
+	devnum_a = strtol(a->devnum, NULL, 10);
+	devnum_b = strtol(b->devnum, NULL, 10);
+	if (devnum_a < devnum_b)
+		return -1;
+	if (devnum_a > devnum_b)
+		return 1;
+	return 0;
+}
+
+
+static void sort_usb_devices(void)
+{
+	LIST_HEAD(sorted_devices);
+	struct usb_device *usb_device;
+	struct usb_device *temp;
+
+//	while (!list_empty(&usb_devices)) {
+	list_for_each_entry_safe(usb_device, temp, &usb_devices, list) {
+		if (list_empty(&sorted_devices)) {
+			list_move_tail(&usb_device->list, &sorted_devices);
+		} else {
+			struct usb_device *sorted_usb_device;
+			int moved = 0;
+			list_for_each_entry(sorted_usb_device, &sorted_devices, list) {
+				if (compare_usb_devices(usb_device, sorted_usb_device) > 0) {
+					printf("adding %s,%s after %s,%s\n",
+						usb_device->busnum,
+						usb_device->devnum,
+						sorted_usb_device->busnum,
+						sorted_usb_device->devnum);
+					list_move_tail(&usb_device->list, &sorted_devices);
+					moved = 1;
+					break;
+				}
+			}
+			if (moved == 0) {
+				printf("adding %s,%s to head\n",
+					usb_device->busnum,
+					usb_device->devnum);
+				list_move(&usb_device->list, &sorted_devices);
+			}
+		}
+	}
+//	}
+	if (list_empty(&usb_devices)) {
+		printf("list empty usb_devices\n");
+	}
+	list_splice(&sorted_devices, &usb_devices);
+}
+
 static void print_usb_devices(void)
 {
 	struct usb_device *usb_device;
@@ -385,6 +447,7 @@ int main(void)
 	udev_enumerate_unref(enumerate);
 
 	udev_unref(udev);
+	sort_usb_devices();
 	print_usb_devices();
 	free_usb_devices();
 	return 0;
