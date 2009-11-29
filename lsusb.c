@@ -161,7 +161,6 @@ static int compare_usb_devices(struct usb_device *a, struct usb_device *b)
 	long devnum_a;
 	long devnum_b;
 
-	printf(" %s,%s vs %s,%s\n", a->busnum, a->devnum, b->busnum, b->devnum);
 	if (busnum_a < busnum_b)
 		return -1;
 	if (busnum_a > busnum_b)
@@ -190,11 +189,7 @@ static void sort_usb_devices(void)
 			int moved = 0;
 			list_for_each_entry(sorted_usb_device, &sorted_devices, list) {
 				if (compare_usb_devices(usb_device, sorted_usb_device) <= 0) {
-					printf("adding %s,%s before %s,%s\n",
-						usb_device->busnum,
-						usb_device->devnum,
-						sorted_usb_device->busnum,
-						sorted_usb_device->devnum);
+					/* add usb_device before sorted_usb_device */
 					list_del(&usb_device->list);
 					list_add_tail(&usb_device->list, &sorted_usb_device->list);
 					moved = 1;
@@ -202,16 +197,12 @@ static void sort_usb_devices(void)
 				}
 			}
 			if (moved == 0) {
-				printf("adding %s,%s to tail\n",
-					usb_device->busnum,
-					usb_device->devnum);
+				/* add usb_device to the sorted_devices tail */
 				list_move_tail(&usb_device->list, &sorted_devices);
 			}
 		}
 	}
-	if (list_empty(&usb_devices)) {
-		printf("list empty usb_devices\n");
-	}
+	/* usb_devices should be empty now, so just swap the lists over. */
 	list_splice(&sorted_devices, &usb_devices);
 }
 
