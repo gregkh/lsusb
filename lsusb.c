@@ -182,7 +182,6 @@ static void sort_usb_devices(void)
 	struct usb_device *usb_device;
 	struct usb_device *temp;
 
-//	while (!list_empty(&usb_devices)) {
 	list_for_each_entry_safe(usb_device, temp, &usb_devices, list) {
 		if (list_empty(&sorted_devices)) {
 			list_move_tail(&usb_device->list, &sorted_devices);
@@ -198,10 +197,6 @@ static void sort_usb_devices(void)
 						sorted_usb_device->devnum);
 					list_del(&usb_device->list);
 					list_add_tail(&usb_device->list, &sorted_usb_device->list);
-					// This is wrong, needs to be inserted after sorted_usb_device
-					// not at the end of the list as it currently is
-					// FIXME
-					//list_move_tail(&usb_device->list, &sorted_devices);
 					moved = 1;
 					break;
 				}
@@ -214,7 +209,6 @@ static void sort_usb_devices(void)
 			}
 		}
 	}
-//	}
 	if (list_empty(&usb_devices)) {
 		printf("list empty usb_devices\n");
 	}
