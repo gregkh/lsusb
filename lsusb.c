@@ -174,32 +174,43 @@ static int compare_usb_devices(struct usb_device *a, struct usb_device *b)
 	return 0;
 }
 
-
 static void sort_usb_devices(void)
 {
 	LIST_HEAD(sorted_devices);
+	struct usb_device *sorted_usb_device;
 	struct usb_device *usb_device;
 	struct usb_device *temp;
+	int moved;
 
 	list_for_each_entry_safe(usb_device, temp, &usb_devices, list) {
+		/* is this the first item to add to the list? */
 		if (list_empty(&sorted_devices)) {
 			list_move_tail(&usb_device->list, &sorted_devices);
-		} else {
-			struct usb_device *sorted_usb_device;
-			int moved = 0;
-			list_for_each_entry(sorted_usb_device, &sorted_devices, list) {
-				if (compare_usb_devices(usb_device, sorted_usb_device) <= 0) {
-					/* add usb_device before sorted_usb_device */
-					list_del(&usb_device->list);
-					list_add_tail(&usb_device->list, &sorted_usb_device->list);
-					moved = 1;
-					break;
-				}
+			continue;
+		}
+
+		/*
+		 * Not the first item, iterate over the sorted list and try
+		 * to find a place in it to put this device
+		 */
+		moved = 0;
+		list_for_each_entry(sorted_usb_device, &sorted_devices, list) {
+			if (compare_usb_devices(usb_device, sorted_usb_device) <= 0) {
+				/* add usb_device before sorted_usb_device */
+				list_del(&usb_device->list);
+				list_add_tail(&usb_device->list,
+					      &sorted_usb_device->list);
+				moved = 1;
+				break;
 			}
-			if (moved == 0) {
-				/* add usb_device to the sorted_devices tail */
-				list_move_tail(&usb_device->list, &sorted_devices);
-			}
+		}
+		if (moved == 0) {
+			/*
+			 * Could not find a place in the list to add the
+			 * device, so add it to the end of the sorted_devices
+			 * list as that is where it belongs.
+			 */
+			list_move_tail(&usb_device->list, &sorted_devices);
 		}
 	}
 	/* usb_devices should be empty now, so just swap the lists over. */
