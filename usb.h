@@ -43,14 +43,10 @@ struct usb_endpoint {
 
 struct usb_device {
 	struct list_head list;			/* connect devices independant of the bus */
-	struct usb_device *next;		/* next port on this hub */
 	struct usb_interface *first_interface;	/* list of interfaces */
 	struct usb_device *first_child;		/* connect devices on this port */
-	struct usb_device *parent;		/* hub this device is connected to */
-	unsigned int parent_portnum;
-	unsigned int portnum;
+	struct list_head interfaces;
 
-	unsigned int configuration;
 	const char *idProduct;
 	const char *idVendor;
 	const char *busnum;
@@ -74,6 +70,7 @@ struct usb_device {
 	const char *product;
 	const char *serial;
 
+	struct usb_endpoint *ep0;
 	char *name;
 	char *driver;			/* always "usb" but hey, it's nice to be complete */
 };
