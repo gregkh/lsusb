@@ -25,10 +25,11 @@ struct usb_config {
 
 struct usb_interface {
 	struct list_head list;
-	struct usb_endpoint endpoints;
+	struct list_head endpoints;
 	unsigned int configuration;
 	unsigned int ifnum;
 
+	char *sysname;
 	char *bAlternateSetting;
 	char *bInterfaceClass;
 	char *bInterfaceNumber;

@@ -32,6 +32,12 @@
 #include "list.h"
 #include "usb.h"
 
+/* From the kernel file, include/linux/stringify.h */
+#define __stringify_1(x...)     #x
+#define __stringify(x...)       __stringify_1(x)
+
+
+
 static LIST_HEAD(usb_devices);
 static struct udev *udev;
 
@@ -76,6 +82,7 @@ static void free_usb_endpoint(struct usb_endpoint *usb_endpoint)
 static void free_usb_interface(struct usb_interface *usb_intf)
 {
 	free(usb_intf->driver);
+	free(usb_intf->sysname);
 	free(usb_intf->bAlternateSetting);
 	free(usb_intf->bInterfaceClass);
 	free(usb_intf->bInterfaceNumber);
@@ -217,10 +224,32 @@ static void print_usb_devices(void)
 			usb_device->manufacturer);
 		list_for_each_entry(usb_interface, &usb_device->interfaces, list) {
 			printf("\tIntf %s (%s)\n",
-				usb_interface->bInterfaceNumber,
+				usb_interface->sysname,
 				usb_interface->driver);
 		}
 	}
+}
+
+static struct usb_endpoint *create_usb_endpoint(struct udev_device *device, const char *endpoint_name)
+{
+	struct usb_endpoint *ep;
+	char filename[PATH_MAX];
+
+	ep = new_usb_endpoint();
+
+#define get_endpoint_string(string)					\
+	sprintf(filename, "%s/"__stringify(string), endpoint_name);	\
+	ep->string = get_dev_string(device, filename);
+
+	get_endpoint_string(bEndpointAddress);
+	get_endpoint_string(bInterval);
+	get_endpoint_string(bLength);
+	get_endpoint_string(bmAttributes);
+	get_endpoint_string(direction);
+	get_endpoint_string(type);
+	get_endpoint_string(wMaxPacketSize);
+
+	return ep;
 }
 
 static void create_usb_interface(struct udev_device *device, struct usb_device *usb_device)
@@ -248,39 +277,36 @@ static void create_usb_interface(struct udev_device *device, struct usb_device *
 		 */
 		if (!isdigit(dirent->d_name[0]))
 			continue;
-		printf("Interface '%s' ", dirent->d_name);
+
 		sprintf(file, "%s/%s/bInterfaceClass",
 			udev_device_get_syspath(device), dirent->d_name);
 		temp_file = open(file, O_RDONLY);
-		if (temp_file == -1) {
-			printf(" not an interface\n");
+		if (temp_file == -1)
 			continue;
-		}
-		printf(" is an interface\n");
+
 		close(temp_file);
 		sprintf(file, "%s/%s", udev_device_get_syspath(device),
 			dirent->d_name);
 		interface = udev_device_new_from_syspath(udev, file);
 		if (interface == NULL) {
-			printf("can't get interface for %s?\n", file);
+			fprintf(stderr, "can't get interface for %s?\n", file);
 			continue;
 		}
 		usb_intf = new_usb_interface();
-
+		INIT_LIST_HEAD(&usb_intf->endpoints);
 		usb_intf->bAlternateSetting	= get_dev_string(interface, "bAlternateSetting");
 		usb_intf->bInterfaceClass	= get_dev_string(interface, "bInterfaceClass");
 		usb_intf->bInterfaceNumber	= get_dev_string(interface, "bInterfaceNumber");
 		usb_intf->bInterfaceProtocol	= get_dev_string(interface, "bInterfaceProtocol");
 		usb_intf->bInterfaceSubClass	= get_dev_string(interface, "bInterfaceSubClass");
 		usb_intf->bNumEndpoints		= get_dev_string(interface, "bNumEndpoints");
+		usb_intf->sysname		= strdup(udev_device_get_sysname(interface));
 
 		driver_name = udev_device_get_driver(interface);
 		if (driver_name)
 			usb_intf->driver = strdup(driver_name);
 		list_add_tail(&usb_intf->list, &usb_device->interfaces);
-		printf("\tIntf %s (%s)\n",
-			usb_intf->bInterfaceNumber,
-			usb_intf->driver);
+
 		udev_device_unref(interface);
 	}
 	closedir(dir);
@@ -452,14 +478,7 @@ static void create_usb_device(struct udev_device *device)
 		usb_device->driver = strdup(temp);
 
 	/* Build up endpoint 0 information */
-	usb_device->ep0 = new_usb_endpoint();
-	usb_device->ep0->bEndpointAddress = get_dev_string(device, "ep_00/bEndpointAddress");
-	usb_device->ep0->bInterval	= get_dev_string(device, "ep_00/bInterval");
-	usb_device->ep0->bLength	= get_dev_string(device, "ep_00/bLength");
-	usb_device->ep0->bmAttributes	= get_dev_string(device, "ep_00/bmAttributes");
-	usb_device->ep0->direction	= get_dev_string(device, "ep_00/direction");
-	usb_device->ep0->type		= get_dev_string(device, "ep_00/type");
-	usb_device->ep0->wMaxPacketSize	= get_dev_string(device, "ep_00/wMaxPacketSize");
+	usb_device->ep0 = create_usb_endpoint(device, "ep_00");
 
 	/*
 	 * Read the raw descriptor to get some more information (endpoint info,
