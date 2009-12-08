@@ -124,15 +124,21 @@ static void free_usb_devices(void)
 {
 	struct usb_device *usb_device;
 	struct usb_interface *usb_interface;
+	struct usb_endpoint *usb_endpoint;
 	struct usb_device *temp_usb;
 	struct usb_interface *temp_intf;
+	struct usb_endpoint *temp_endpoint;
 
 	list_for_each_entry_safe(usb_device, temp_usb, &usb_devices, list) {
 		list_del(&usb_device->list);
 		list_for_each_entry_safe(usb_interface, temp_intf, &usb_device->interfaces, list) {
 			list_del(&usb_interface->list);
-			free_usb_interface(usb_interface);
+			list_for_each_entry_safe(usb_endpoint, temp_endpoint, &usb_interface->endpoints, list) {
+				list_del(&usb_endpoint->list);
+				free_usb_endpoint(usb_endpoint);
 			}
+			free_usb_interface(usb_interface);
+		}
 		free_usb_device(usb_device);
 	}
 }
@@ -214,6 +220,7 @@ static void print_usb_devices(void)
 {
 	struct usb_device *usb_device;
 	struct usb_interface *usb_interface;
+	struct usb_endpoint *usb_endpoint;
 
 	list_for_each_entry(usb_device, &usb_devices, list) {
 		printf("Bus %03ld Device %03ld: ID %s:%s %s\n",
@@ -226,6 +233,9 @@ static void print_usb_devices(void)
 			printf("\tIntf %s (%s)\n",
 				usb_interface->sysname,
 				usb_interface->driver);
+			list_for_each_entry(usb_endpoint, &usb_interface->endpoints, list) {
+				printf("\t\tEp (%s)\n", usb_endpoint->bEndpointAddress);
+			}
 		}
 	}
 }
@@ -250,6 +260,31 @@ static struct usb_endpoint *create_usb_endpoint(struct udev_device *device, cons
 	get_endpoint_string(wMaxPacketSize);
 
 	return ep;
+}
+
+static void create_usb_interface_endpoints(struct udev_device *device, struct usb_interface *usb_intf)
+{
+	struct usb_endpoint *ep;
+	struct dirent *dirent;
+	DIR *dir;
+
+	dir = opendir(udev_device_get_syspath(device));
+	if (dir == NULL)
+		exit(1);
+	while ((dirent = readdir(dir)) != NULL) {
+		if (dirent->d_type != DT_DIR)
+			continue;
+		/* endpoints all start with "ep_" */
+		if ((dirent->d_name[0] != 'e') ||
+		    (dirent->d_name[1] != 'p') ||
+		    (dirent->d_name[2] != '_'))
+			continue;
+		ep = create_usb_endpoint(device, dirent->d_name);
+
+		list_add_tail(&ep->list, &usb_intf->endpoints);
+	}
+	closedir(dir);
+
 }
 
 static void create_usb_interface(struct udev_device *device, struct usb_device *usb_device)
@@ -306,6 +341,9 @@ static void create_usb_interface(struct udev_device *device, struct usb_device *
 		if (driver_name)
 			usb_intf->driver = strdup(driver_name);
 		list_add_tail(&usb_intf->list, &usb_device->interfaces);
+
+		/* find all endpoints for this interface, and save them */
+		create_usb_interface_endpoints(interface, usb_intf);
 
 		udev_device_unref(interface);
 	}
