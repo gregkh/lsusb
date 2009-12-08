@@ -60,52 +60,52 @@ static struct usb_endpoint *new_usb_endpoint(void)
 
 static void free_usb_endpoint(struct usb_endpoint *usb_endpoint)
 {
-	free((void *)usb_endpoint->bEndpointAddress);
-	free((void *)usb_endpoint->bInterval);
-	free((void *)usb_endpoint->bLength);
-	free((void *)usb_endpoint->bmAttributes);
-	free((void *)usb_endpoint->direction);
-	free((void *)usb_endpoint->type);
-	free((void *)usb_endpoint->wMaxPacketSize);
+	free(usb_endpoint->bEndpointAddress);
+	free(usb_endpoint->bInterval);
+	free(usb_endpoint->bLength);
+	free(usb_endpoint->bmAttributes);
+	free(usb_endpoint->direction);
+	free(usb_endpoint->type);
+	free(usb_endpoint->wMaxPacketSize);
 	free(usb_endpoint);
 }
 
 static void free_usb_interface(struct usb_interface *usb_intf)
 {
-	free((void *)usb_intf->driver);
-	free((void *)usb_intf->bAlternateSetting);
-	free((void *)usb_intf->bInterfaceClass);
-	free((void *)usb_intf->bInterfaceNumber);
-	free((void *)usb_intf->bInterfaceProtocol);
-	free((void *)usb_intf->bInterfaceSubClass);
-	free((void *)usb_intf->bNumEndpoints);
+	free(usb_intf->driver);
+	free(usb_intf->bAlternateSetting);
+	free(usb_intf->bInterfaceClass);
+	free(usb_intf->bInterfaceNumber);
+	free(usb_intf->bInterfaceProtocol);
+	free(usb_intf->bInterfaceSubClass);
+	free(usb_intf->bNumEndpoints);
 	free(usb_intf);
 }
 
 static void free_usb_device(struct usb_device *usb_device)
 {
-	free((void *)usb_device->idVendor);
-	free((void *)usb_device->idProduct);
-	free((void *)usb_device->busnum);
-	free((void *)usb_device->devnum);
-	free((void *)usb_device->manufacturer);
-	free((void *)usb_device->bcdDevice);
-	free((void *)usb_device->product);
-	free((void *)usb_device->serial);
-	free((void *)usb_device->bConfigurationValue);
-	free((void *)usb_device->bDeviceClass);
-	free((void *)usb_device->bDeviceProtocol);
-	free((void *)usb_device->bDeviceSubClass);
-	free((void *)usb_device->bNumConfigurations);
-	free((void *)usb_device->bNumInterfaces);
-	free((void *)usb_device->bmAttributes);
-	free((void *)usb_device->bMaxPacketSize0);
-	free((void *)usb_device->bMaxPower);
-	free((void *)usb_device->maxchild);
-	free((void *)usb_device->quirks);
-	free((void *)usb_device->speed);
-	free((void *)usb_device->version);
-	free((void *)usb_device->driver);
+	free(usb_device->idVendor);
+	free(usb_device->idProduct);
+	free(usb_device->busnum);
+	free(usb_device->devnum);
+	free(usb_device->manufacturer);
+	free(usb_device->bcdDevice);
+	free(usb_device->product);
+	free(usb_device->serial);
+	free(usb_device->bConfigurationValue);
+	free(usb_device->bDeviceClass);
+	free(usb_device->bDeviceProtocol);
+	free(usb_device->bDeviceSubClass);
+	free(usb_device->bNumConfigurations);
+	free(usb_device->bNumInterfaces);
+	free(usb_device->bmAttributes);
+	free(usb_device->bMaxPacketSize0);
+	free(usb_device->bMaxPower);
+	free(usb_device->maxchild);
+	free(usb_device->quirks);
+	free(usb_device->speed);
+	free(usb_device->version);
+	free(usb_device->driver);
 	free_usb_endpoint(usb_device->ep0);
 	free(usb_device);
 }
@@ -121,7 +121,7 @@ static void free_usb_devices(void)
 	}
 }
 
-static const char *get_dev_string(struct udev_device *device, const char *name)
+static char *get_dev_string(struct udev_device *device, const char *name)
 {
 	const char *value;
 
@@ -308,7 +308,6 @@ static void read_raw_usb_descriptor(struct udev_device *device)
 	ssize_t read_retval;
 
 	sprintf(filename, "%s/descriptors", udev_device_get_syspath(device));
-	printf("%s\n", filename);
 
 	file = open(filename, O_RDONLY);
 	if (file == -1)
@@ -413,7 +412,6 @@ static void create_usb_device(struct udev_device *device)
 	 * configurations, interfaces, etc.)
 	 */
 	sprintf(file, "%s/descriptors", udev_device_get_syspath(device));
-	printf("%s\n", file);
 	read_raw_usb_descriptor(device);
 
 	/* Add the device to the list of global devices in the system */
@@ -423,7 +421,6 @@ static void create_usb_device(struct udev_device *device)
 static void create_usb_root_device(struct udev_device *device)
 {
 	create_usb_device(device);
-	printf("\tsyspath: %s\n", udev_device_get_syspath(device));
 }
 
 //int main(int argc, char *argv[])

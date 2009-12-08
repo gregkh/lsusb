@@ -9,12 +9,12 @@ struct usb_interface {
 	unsigned int configuration;
 	unsigned int ifnum;
 
-	const char *bAlternateSetting;
-	const char *bInterfaceClass;
-	const char *bInterfaceNumber;
-	const char *bInterfaceProtocol;
-	const char *bInterfaceSubClass;
-	const char *bNumEndpoints;
+	char *bAlternateSetting;
+	char *bInterfaceClass;
+	char *bInterfaceNumber;
+	char *bInterfaceProtocol;
+	char *bInterfaceSubClass;
+	char *bNumEndpoints;
 
 	char *name;
 	char *driver;
@@ -32,13 +32,13 @@ struct usb_config {
 };
 
 struct usb_endpoint {
-	const char *bEndpointAddress;
-	const char *bInterval;
-	const char *bLength;
-	const char *bmAttributes;
-	const char *direction;
-	const char *type;
-	const char *wMaxPacketSize;
+	char *bEndpointAddress;
+	char *bInterval;
+	char *bLength;
+	char *bmAttributes;
+	char *direction;
+	char *type;
+	char *wMaxPacketSize;
 };
 
 struct usb_device {
@@ -47,28 +47,28 @@ struct usb_device {
 	struct usb_device *first_child;		/* connect devices on this port */
 	struct list_head interfaces;
 
-	const char *idProduct;
-	const char *idVendor;
-	const char *busnum;
-	const char *devnum;
-	const char *maxchild;
-	const char *quirks;
-	const char *speed;
-	const char *version;
+	char *idProduct;
+	char *idVendor;
+	char *busnum;
+	char *devnum;
+	char *maxchild;
+	char *quirks;
+	char *speed;
+	char *version;
 
-	const char *bConfigurationValue;
-	const char *bDeviceClass;
-	const char *bDeviceProtocol;
-	const char *bDeviceSubClass;
-	const char *bNumConfigurations;
-	const char *bNumInterfaces;
-	const char *bmAttributes;
-	const char *bMaxPacketSize0;
-	const char *bMaxPower;
-	const char *manufacturer;
-	const char *bcdDevice;
-	const char *product;
-	const char *serial;
+	char *bConfigurationValue;
+	char *bDeviceClass;
+	char *bDeviceProtocol;
+	char *bDeviceSubClass;
+	char *bNumConfigurations;
+	char *bNumInterfaces;
+	char *bmAttributes;
+	char *bMaxPacketSize0;
+	char *bMaxPower;
+	char *manufacturer;
+	char *bcdDevice;
+	char *product;
+	char *serial;
 
 	struct usb_endpoint *ep0;
 	char *name;
