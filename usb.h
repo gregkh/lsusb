@@ -1,11 +1,31 @@
 #include "short_types.h"
 
-struct usb_device;
+struct usb_endpoint {
+	struct list_head list;
+	char *bEndpointAddress;
+	char *bInterval;
+	char *bLength;
+	char *bmAttributes;
+	char *direction;
+	char *type;
+	char *wMaxPacketSize;
+};
+
+struct usb_config {
+	struct list_head list;
+	u8 bLength;
+	u8 bDescriptorType;
+	u16 wTotalLength;
+	u8 bNumInterfaces;
+	u8 bConfigurationValue;
+	u8 iConfiguration;
+	u8 bmAttributes;
+	u8 bMaxPower;
+};
 
 struct usb_interface {
 	struct list_head list;
-	struct usb_interface *next;
-	struct usb_device *parent;
+	struct usb_endpoint endpoints;
 	unsigned int configuration;
 	unsigned int ifnum;
 
@@ -20,31 +40,8 @@ struct usb_interface {
 	char *driver;
 };
 
-struct usb_config {
-	u8 bLength;
-	u8 bDescriptorType;
-	u16 wTotalLength;
-	u8 bNumInterfaces;
-	u8 bConfigurationValue;
-	u8 iConfiguration;
-	u8 bmAttributes;
-	u8 bMaxPower;
-};
-
-struct usb_endpoint {
-	char *bEndpointAddress;
-	char *bInterval;
-	char *bLength;
-	char *bmAttributes;
-	char *direction;
-	char *type;
-	char *wMaxPacketSize;
-};
-
 struct usb_device {
 	struct list_head list;			/* connect devices independant of the bus */
-	struct usb_interface *first_interface;	/* list of interfaces */
-	struct usb_device *first_child;		/* connect devices on this port */
 	struct list_head interfaces;
 
 	char *idProduct;

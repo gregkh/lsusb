@@ -116,10 +116,16 @@ static void free_usb_device(struct usb_device *usb_device)
 static void free_usb_devices(void)
 {
 	struct usb_device *usb_device;
-	struct usb_device *temp;
+	struct usb_interface *usb_interface;
+	struct usb_device *temp_usb;
+	struct usb_interface *temp_intf;
 
-	list_for_each_entry_safe(usb_device, temp, &usb_devices, list) {
+	list_for_each_entry_safe(usb_device, temp_usb, &usb_devices, list) {
 		list_del(&usb_device->list);
+		list_for_each_entry_safe(usb_interface, temp_intf, &usb_device->interfaces, list) {
+			list_del(&usb_interface->list);
+			free_usb_interface(usb_interface);
+			}
 		free_usb_device(usb_device);
 	}
 }
@@ -200,6 +206,7 @@ static void sort_usb_devices(void)
 static void print_usb_devices(void)
 {
 	struct usb_device *usb_device;
+	struct usb_interface *usb_interface;
 
 	list_for_each_entry(usb_device, &usb_devices, list) {
 		printf("Bus %03ld Device %03ld: ID %s:%s %s\n",
@@ -208,31 +215,75 @@ static void print_usb_devices(void)
 			usb_device->idVendor,
 			usb_device->idProduct,
 			usb_device->manufacturer);
+		list_for_each_entry(usb_interface, &usb_device->interfaces, list) {
+			printf("\tIntf %s (%s)\n",
+				usb_interface->bInterfaceNumber,
+				usb_interface->driver);
+		}
 	}
 }
 
-static void create_usb_interface(struct udev_device *device)
+static void create_usb_interface(struct udev_device *device, struct usb_device *usb_device)
 {
 	struct usb_interface *usb_intf;
-	const char *temp;
+	struct udev_device *interface;
+	const char *driver_name;
+	int temp_file;
+	struct dirent *dirent;
+	char file[PATH_MAX];
+	DIR *dir;
 
-	usb_intf = new_usb_interface();
+	dir = opendir(udev_device_get_syspath(device));
+	if (dir == NULL)
+		exit(1);
+	while ((dirent = readdir(dir)) != NULL) {
+		if (dirent->d_type != DT_DIR)
+			continue;
+		/*
+		 * As the devnum isn't in older kernels, we need to guess to
+		 * try to find the interfaces.
+		 *
+		 * If the first char is a digit, and bInterfaceClass is in the
+		 * subdir, then odds are it's a child interface
+		 */
+		if (!isdigit(dirent->d_name[0]))
+			continue;
+		printf("Interface '%s' ", dirent->d_name);
+		sprintf(file, "%s/%s/bInterfaceClass",
+			udev_device_get_syspath(device), dirent->d_name);
+		temp_file = open(file, O_RDONLY);
+		if (temp_file == -1) {
+			printf(" not an interface\n");
+			continue;
+		}
+		printf(" is an interface\n");
+		close(temp_file);
+		sprintf(file, "%s/%s", udev_device_get_syspath(device),
+			dirent->d_name);
+		interface = udev_device_new_from_syspath(udev, file);
+		if (interface == NULL) {
+			printf("can't get interface for %s?\n", file);
+			continue;
+		}
+		usb_intf = new_usb_interface();
 
-	usb_intf->bAlternateSetting	= get_dev_string(device, "bAlternateSetting");
-	usb_intf->bInterfaceClass	= get_dev_string(device, "bInterfaceClass");
-	usb_intf->bInterfaceNumber	= get_dev_string(device, "bInterfaceNumber");
-	usb_intf->bInterfaceProtocol	= get_dev_string(device, "bInterfaceProtocol");
-	usb_intf->bInterfaceSubClass	= get_dev_string(device, "bInterfaceSubClass");
-	usb_intf->bNumEndpoints		= get_dev_string(device, "bNumEndpoints");
+		usb_intf->bAlternateSetting	= get_dev_string(interface, "bAlternateSetting");
+		usb_intf->bInterfaceClass	= get_dev_string(interface, "bInterfaceClass");
+		usb_intf->bInterfaceNumber	= get_dev_string(interface, "bInterfaceNumber");
+		usb_intf->bInterfaceProtocol	= get_dev_string(interface, "bInterfaceProtocol");
+		usb_intf->bInterfaceSubClass	= get_dev_string(interface, "bInterfaceSubClass");
+		usb_intf->bNumEndpoints		= get_dev_string(interface, "bNumEndpoints");
 
-	temp = udev_device_get_driver(device);
-	if (temp)
-		usb_intf->driver = strdup(temp);
-
-	printf("\tIntf %s (%s)\n",
-		usb_intf->bInterfaceNumber,
-		usb_intf->driver);
-	free_usb_interface(usb_intf);
+		driver_name = udev_device_get_driver(interface);
+		if (driver_name)
+			usb_intf->driver = strdup(driver_name);
+		list_add_tail(&usb_intf->list, &usb_device->interfaces);
+		printf("\tIntf %s (%s)\n",
+			usb_intf->bInterfaceNumber,
+			usb_intf->driver);
+		udev_device_unref(interface);
+	}
+	closedir(dir);
 }
 
 static void parse_config_descriptor(const unsigned char *descriptor)
@@ -421,44 +472,7 @@ static void create_usb_device(struct udev_device *device)
 	list_add_tail(&usb_device->list, &usb_devices);
 
 	/* try to find the interfaces for this device */
-	{
-	struct dirent *dirent;
-	DIR *dir;
-
-	dir = opendir(udev_device_get_syspath(device));
-	if (dir == NULL)
-		exit(1);
-	while ((dirent = readdir(dir)) != NULL) {
-		if (dirent->d_type == DT_DIR) {
-			/* as the devnum isn't in older kernels, we need to guess to try to find the interfaces */
-			/* if the first char is a digit, and bInterfaceClass is in the subdir, then odds are it's a child interface */
-			if (isdigit(dirent->d_name[0])) {
-				int temp_file;
-				printf("Interface '%s' ", dirent->d_name);
-				sprintf(file, "%s/%s/bInterfaceClass", udev_device_get_syspath(device), dirent->d_name);
-				temp_file = open(file, O_RDONLY);
-				if (temp_file == -1) {
-					printf(" not an interface\n");
-				} else {
-					printf(" is an interface\n");
-					close(temp_file);
-					sprintf(file, "%s/%s", udev_device_get_syspath(device), dirent->d_name);
-					struct udev_device *interface = udev_device_new_from_syspath(udev, file);
-					if (interface == NULL) {
-						printf("can't get interface for %s?\n", file);
-					} else {
-						create_usb_interface(interface);
-					}
-
-				}
-			}
-		}
-	}
-	closedir(dir);
-
-
-	}
-
+	create_usb_interface(device, usb_device);
 }
 
 static void create_usb_root_device(struct udev_device *device)
