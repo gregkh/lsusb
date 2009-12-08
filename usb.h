@@ -41,6 +41,17 @@ struct usb_interface {
 	char *driver;
 };
 
+struct usb_device_qualifier {
+	char *bLength;
+	char *bDescriptorType;
+	char *bcdUSB;
+	char *bDeviceClass;
+	char *bDeviceSubClass;
+	char *bDeviceProtocol;
+	char *bMaxPacketSize0;
+	char *bNumConfigurations;
+};
+
 struct usb_device {
 	struct list_head list;			/* connect devices independant of the bus */
 	struct list_head interfaces;
@@ -69,6 +80,7 @@ struct usb_device {
 	char *serial;
 
 	struct usb_endpoint *ep0;
+	struct usb_device_qualifier *qualifier;
 	char *name;
 	char *driver;			/* always "usb" but hey, it's nice to be complete */
 };

@@ -417,7 +417,45 @@ static void parse_endpoint_descriptor(const unsigned char *descriptor)
 	printf("\tbInterval\t\t%d\n", bInterval);
 }
 
-static void read_raw_usb_descriptor(struct udev_device *device)
+static void parse_device_qualifier(struct usb_device *usb_device, const unsigned char *descriptor)
+{
+	struct usb_device_qualifier *dq;
+	char string[255];
+	unsigned char bLength			= descriptor[0];
+	unsigned char bDescriptorType		= descriptor[1];
+	unsigned char bcdUSB0			= descriptor[3];
+	unsigned char bcdUSB1			= descriptor[2];
+	unsigned char bDeviceClass		= descriptor[4];
+	unsigned char bDeviceSubClass		= descriptor[5];
+	unsigned char bDeviceProtocol		= descriptor[6];
+	unsigned char bMaxPacketSize0		= descriptor[7];
+	unsigned char bNumConfigurations	= descriptor[8];
+
+	dq = robust_malloc(sizeof(struct usb_device_qualifier));
+
+#define build_string(name)		\
+	sprintf(string, "%d", name);	\
+	dq->name = strdup(string);
+
+	build_string(bLength);
+	build_string(bDescriptorType);
+	build_string(bDeviceClass);
+	build_string(bDeviceSubClass);
+	build_string(bDeviceProtocol);
+	build_string(bMaxPacketSize0);
+	build_string(bNumConfigurations);
+	sprintf(string, "%2x.%2x", bcdUSB0, bcdUSB1);
+	dq->bcdUSB = strdup(string);
+
+	usb_device->qualifier = dq;
+
+	printf("Device Qualifier\n");
+	printf("\tbLength\t\t\t%s\n", dq->bLength);
+	printf("\tbDescriptorType\t\t%s\n", dq->bDescriptorType);
+	printf("\tbcdUSB\t\t%s", dq->bcdUSB);
+}
+
+static void read_raw_usb_descriptor(struct udev_device *device, struct usb_device *usb_device)
 {
 	char filename[PATH_MAX];
 	int file;
@@ -463,6 +501,7 @@ static void read_raw_usb_descriptor(struct udev_device *device)
 			break;
 		case 0x06:
 			/* device qualifier */
+			parse_device_qualifier(usb_device, data);
 			break;
 		case 0x07:
 			/* other speed config */
@@ -523,7 +562,7 @@ static void create_usb_device(struct udev_device *device)
 	 * configurations, interfaces, etc.)
 	 */
 	sprintf(file, "%s/descriptors", udev_device_get_syspath(device));
-	read_raw_usb_descriptor(device);
+	read_raw_usb_descriptor(device, usb_device);
 
 	/* Add the device to the list of global devices in the system */
 	list_add_tail(&usb_device->list, &usb_devices);
