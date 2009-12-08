@@ -21,6 +21,8 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <limits.h>
+#include <dirent.h>
+#include <ctype.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 
@@ -31,6 +33,7 @@
 #include "usb.h"
 
 static LIST_HEAD(usb_devices);
+static struct udev *udev;
 
 static void *robust_malloc(size_t size)
 {
@@ -416,6 +419,46 @@ static void create_usb_device(struct udev_device *device)
 
 	/* Add the device to the list of global devices in the system */
 	list_add_tail(&usb_device->list, &usb_devices);
+
+	/* try to find the interfaces for this device */
+	{
+	struct dirent *dirent;
+	DIR *dir;
+
+	dir = opendir(udev_device_get_syspath(device));
+	if (dir == NULL)
+		exit(1);
+	while ((dirent = readdir(dir)) != NULL) {
+		if (dirent->d_type == DT_DIR) {
+			/* as the devnum isn't in older kernels, we need to guess to try to find the interfaces */
+			/* if the first char is a digit, and bInterfaceClass is in the subdir, then odds are it's a child interface */
+			if (isdigit(dirent->d_name[0])) {
+				int temp_file;
+				printf("Interface '%s' ", dirent->d_name);
+				sprintf(file, "%s/%s/bInterfaceClass", udev_device_get_syspath(device), dirent->d_name);
+				temp_file = open(file, O_RDONLY);
+				if (temp_file == -1) {
+					printf(" not an interface\n");
+				} else {
+					printf(" is an interface\n");
+					close(temp_file);
+					sprintf(file, "%s/%s", udev_device_get_syspath(device), dirent->d_name);
+					struct udev_device *interface = udev_device_new_from_syspath(udev, file);
+					if (interface == NULL) {
+						printf("can't get interface for %s?\n", file);
+					} else {
+						create_usb_interface(interface);
+					}
+
+				}
+			}
+		}
+	}
+	closedir(dir);
+
+
+	}
+
 }
 
 static void create_usb_root_device(struct udev_device *device)
@@ -426,7 +469,6 @@ static void create_usb_root_device(struct udev_device *device)
 //int main(int argc, char *argv[])
 int main(void)
 {
-	struct udev *udev;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *list_entry;
 
