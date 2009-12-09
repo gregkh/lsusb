@@ -9,6 +9,7 @@
 /* Functions in the core */
 void *robust_malloc(size_t size);
 char *get_dev_string(struct udev_device *device, const char *name);
+extern struct udev *udev;
 
 /* device.c */
 void create_usb_device(struct udev_device *device);
