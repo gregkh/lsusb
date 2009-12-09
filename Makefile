@@ -6,7 +6,7 @@ CFLAGS?=-O1 -g ${WARNFLAGS}
 CC?=gcc
 
 
-OBJS = device.o interface.o lsusb.o
+OBJS = device.o interface.o endpoint.o raw.o lsusb.o
 
 
 lsusb: $(OBJS) Makefile usb.h list.h
