@@ -1,3 +1,6 @@
+#ifndef _USB_H
+#define _USB_H
+
 #include "short_types.h"
 
 struct usb_endpoint {
@@ -85,3 +88,4 @@ struct usb_device {
 	char *driver;			/* always "usb" but hey, it's nice to be complete */
 };
 
+#endif	/* #define _USB_H */
