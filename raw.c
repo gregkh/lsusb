@@ -48,7 +48,7 @@ static void parse_config_descriptor(const unsigned char *descriptor)
 	config.iConfiguration		= descriptor[6];
 	config.bmAttributes		= descriptor[7];
 	config.bMaxPower		= descriptor[8];
-
+#if 0
 	printf("Config descriptor\n");
 	printf("\tbLength\t\t\t%d\n", config.bLength);
 	printf("\tbDescriptorType\t\t%d\n", config.bDescriptorType);
@@ -58,6 +58,7 @@ static void parse_config_descriptor(const unsigned char *descriptor)
 	printf("\tiConfiguration\t\t%d\n", config.iConfiguration);
 	printf("\tbmAttributes\t\t0x%02x\n", config.bmAttributes);
 	printf("\tbMaxPower\t\t%d\n", config.bMaxPower);
+#endif
 }
 
 static void parse_interface_descriptor(const unsigned char *descriptor)
@@ -71,7 +72,7 @@ static void parse_interface_descriptor(const unsigned char *descriptor)
 	unsigned char bInterfaceSubClass	= descriptor[6];
 	unsigned char bInterfaceProtocol	= descriptor[7];
 	unsigned char iInterface		= descriptor[8];
-
+#if 0
 	printf("Interface descriptor\n");
 	printf("\tbLength\t\t\t%d\n", bLength);
 	printf("\tbDescriptorType\t\t%d\n", bDescriptorType);
@@ -82,7 +83,7 @@ static void parse_interface_descriptor(const unsigned char *descriptor)
 	printf("\tbInterfaceSubClass\t%d\n", bInterfaceSubClass);
 	printf("\tbInterfaceProtocol\t%d\n", bInterfaceProtocol);
 	printf("\tiInterface\t\t%d\n", iInterface);
-
+#endif
 }
 
 static void parse_endpoint_descriptor(const unsigned char *descriptor)
@@ -93,7 +94,7 @@ static void parse_endpoint_descriptor(const unsigned char *descriptor)
 	unsigned char bmAttributes		= descriptor[3];
 	unsigned short wMaxPacketSize		= (descriptor[5] << 8) | descriptor[4];
 	unsigned char bInterval			= descriptor[6];
-
+#if 0
 	printf("Endpoint descriptor\n");
 	printf("\tbLength\t\t\t%d\n", bLength);
 	printf("\tbDescriptorType\t\t%d\n", bDescriptorType);
@@ -101,6 +102,7 @@ static void parse_endpoint_descriptor(const unsigned char *descriptor)
 	printf("\tbmAtributes\t\t%0x\n", bmAttributes);
 	printf("\twMaxPacketSize\t\t%d\n", wMaxPacketSize);
 	printf("\tbInterval\t\t%d\n", bInterval);
+#endif
 }
 
 static void parse_device_qualifier(struct usb_device *usb_device, const unsigned char *descriptor)

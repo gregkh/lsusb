@@ -174,9 +174,9 @@ void print_usb_devices(void)
 			printf("\tIntf %s (%s)\n",
 				usb_interface->sysname,
 				usb_interface->driver);
-			list_for_each_entry(usb_endpoint, &usb_interface->endpoints, list) {
-				printf("\t\tEp (%s)\n", usb_endpoint->bEndpointAddress);
-			}
+//			list_for_each_entry(usb_endpoint, &usb_interface->endpoints, list) {
+//				printf("\t\tEp (%s)\n", usb_endpoint->bEndpointAddress);
+//			}
 		}
 	}
 }
